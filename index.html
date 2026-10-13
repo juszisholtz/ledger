@@ -10,7 +10,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Ledger">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#dfe5e6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#eaeef3" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1b2330" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,16 +18,16 @@
 <style>
 /* Misty dawn palette: slate blue, fog, cream, peach */
 :root{
-  --bg-top:#dfe5e6; --bg-bot:#f4ede6;
-  --bg:#f6f0ea; --surface:#fffaf5; --sunk:rgba(255,250,245,.55); --line:#e6ddd3;
-  --glass:rgba(255,250,245,.62); --glass-line:rgba(255,255,255,.7);
-  --text:#2f3a48; --muted:#7d8592;
-  --accent:#43566f; --accent-soft:#dfe5ec; --on-accent:#fffaf5;
-  --peach:#efc4a2; --peach-soft:#f8e4d4;
-  --red:#b5523d; --red-soft:#f6ddd4; --amber:#bf7a2e; --amber-soft:#f8e6cf;
-  --shadow:0 1px 2px rgba(47,58,72,.05),0 8px 24px -10px rgba(47,58,72,.18);
-  --shadow-lg:0 20px 50px -20px rgba(47,58,72,.35);
-  --radius:16px;
+  --bg-top:#eaeef3; --bg-bot:#f8f6f3;
+  --bg:#f7f8fa; --surface:rgba(255,255,255,.78); --sunk:rgba(255,255,255,.42); --line:#e4e7ec;
+  --glass:rgba(255,255,255,.6); --glass-line:rgba(255,255,255,.9);
+  --text:#233044; --muted:#8a93a1;
+  --accent:#2b3a52; --accent-soft:#e3e8ef; --on-accent:#ffffff;
+  --peach:#c9a684; --peach-soft:#f1e7dc;
+  --red:#b5523d; --red-soft:#f8e3dc; --amber:#b9772c; --amber-soft:#f8ebd8;
+  --shadow:0 1px 2px rgba(35,48,68,.04),0 10px 30px -12px rgba(35,48,68,.14);
+  --shadow-lg:0 22px 50px -20px rgba(35,48,68,.25);
+  --radius:18px;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
@@ -65,7 +65,7 @@ button{cursor:pointer}
 
 /* Header */
 header{display:flex;align-items:center;gap:12px;padding:16px 22px;flex-wrap:wrap}
-.brand{font-weight:300;font-size:28px;letter-spacing:.01em;display:flex;align-items:baseline;gap:12px}
+.brand{font-weight:400;font-size:30px;letter-spacing:.01em;display:flex;align-items:baseline;gap:12px}
 .brand small{font-weight:400;font-size:14px;color:var(--muted);letter-spacing:.02em}
 .summary{display:flex;gap:6px;flex-wrap:wrap}
 .pill{font-size:13px;font-weight:500;padding:3px 11px;border-radius:99px;background:var(--glass);color:var(--muted);border:1px solid var(--glass-line)}
@@ -95,7 +95,7 @@ main{flex:1;min-height:0;overflow:auto}
 .quick{width:100%;border:1px dashed var(--line);background:var(--glass);border-radius:14px;padding:10px 13px;margin-bottom:10px}
 .quick:focus{border-style:solid;border-color:var(--accent);outline:none;background:var(--surface)}
 .cards{display:flex;flex-direction:column;gap:10px}
-.card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:13px 14px 13px 16px;cursor:pointer;position:relative;display:flex;gap:11px;align-items:flex-start;border:1px solid transparent;transition:transform .15s,box-shadow .15s}
+.card{background:var(--surface);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border:1px solid var(--glass-line)!important;border-radius:var(--radius);box-shadow:var(--shadow);padding:13px 14px 13px 16px;cursor:pointer;position:relative;display:flex;gap:11px;align-items:flex-start;border:1px solid transparent;transition:transform .15s,box-shadow .15s}
 .card::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:0 3px 3px 0;background:transparent}
 .card.overdue::before{background:var(--red)} .card.today::before{background:var(--amber)} .card.event::before{background:var(--peach)}
 .card.overdue.event::before{background:var(--red)} .card.today.event::before{background:var(--amber)}
@@ -122,7 +122,7 @@ main{flex:1;min-height:0;overflow:auto}
 .row:first-of-type{border-radius:var(--radius) var(--radius) 0 0}
 .row:last-child{border-radius:0 0 var(--radius) var(--radius);border-bottom:0}
 .row:only-of-type{border-radius:var(--radius)}
-.rows{box-shadow:var(--shadow);border-radius:var(--radius)}
+.rows{box-shadow:var(--shadow);border-radius:var(--radius);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
 .row .t{flex:1;min-width:0;overflow-wrap:anywhere}
 .row.is-done .t{color:var(--muted);text-decoration:line-through}
 .row .st{font-size:12px;padding:2px 9px;border-radius:99px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
