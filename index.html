@@ -153,6 +153,10 @@ main{flex:1;min-height:0;overflow:auto}
 .drawer{position:fixed;top:0;right:0;bottom:0;width:min(520px,100%);background:var(--panel);-webkit-backdrop-filter:blur(30px) saturate(170%);backdrop-filter:blur(30px) saturate(170%);border-left:1px solid var(--glass-line);z-index:11;transform:translateX(100%);transition:transform .25s ease;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 .drawer.open{transform:none}
 .drawer.dragging{transition:none}
+.drawer{touch-action:pan-y}
+html.drawer-open,html.drawer-open body{overflow:hidden;overscroll-behavior:none}
+html.drawer-open main{overflow:hidden!important;touch-action:none;pointer-events:none}
+html.drawer-open .board{overflow:hidden!important}
 .drawer-top{display:flex;align-items:center;gap:8px;padding:12px 18px}
 .close-btn{width:44px;height:44px;border-radius:99px;border:1px solid var(--glass-line);background:var(--glass);color:var(--text);font-size:20px;line-height:1;display:inline-flex;align-items:center;justify-content:center;box-shadow:var(--hi);cursor:pointer}
 .close-btn:active{transform:scale(.94)}
@@ -569,11 +573,13 @@ function openTask(id){
   state.openId = id;
   renderDrawer();
   $('drawer').classList.add('open'); $('scrim').classList.add('open');
+  document.documentElement.classList.add('drawer-open');
   $('drawer').setAttribute('aria-hidden', 'false');
 }
 function closeTask(){
   state.openId = null;
   $('drawer').classList.remove('open'); $('scrim').classList.remove('open');
+  document.documentElement.classList.remove('drawer-open');
   $('drawer').setAttribute('aria-hidden', 'true');
 }
 
@@ -777,9 +783,13 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && state.open
   d.addEventListener('touchmove', e => {
     if (x0 === null) return;
     const mx = e.touches[0].clientX - x0, my = e.touches[0].clientY - y0;
+    const canScroll = body.scrollHeight > body.clientHeight + 1;
     if (dir === null){
+      const horizontal = Math.abs(mx) > Math.abs(my);
+      // Unless the task itself can scroll that way, stop iPhone from scrolling anything behind it.
+      if (horizontal || !canScroll || (my > 0 && body.scrollTop <= 0)) e.preventDefault();
       if (Math.abs(mx) < 8 && Math.abs(my) < 8) return;
-      if (Math.abs(mx) > Math.abs(my)) dir = mx > 0 ? 'right' : 'none';
+      if (horizontal) dir = mx > 0 ? 'right' : 'none';
       else dir = (my > 0 && body.scrollTop <= 0) ? 'down' : 'none';
       if (dir === 'none'){ x0 = null; return; }
       document.activeElement?.blur?.();
