@@ -152,7 +152,10 @@ main{flex:1;min-height:0;overflow:auto}
 .scrim.open{opacity:1;pointer-events:auto}
 .drawer{position:fixed;top:0;right:0;bottom:0;width:min(520px,100%);background:var(--panel);-webkit-backdrop-filter:blur(30px) saturate(170%);backdrop-filter:blur(30px) saturate(170%);border-left:1px solid var(--glass-line);z-index:11;transform:translateX(100%);transition:transform .25s ease;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 .drawer.open{transform:none}
+.drawer.dragging{transition:none}
 .drawer-top{display:flex;align-items:center;gap:8px;padding:12px 18px}
+.close-btn{width:44px;height:44px;border-radius:99px;border:1px solid var(--glass-line);background:var(--glass);color:var(--text);font-size:20px;line-height:1;display:inline-flex;align-items:center;justify-content:center;box-shadow:var(--hi);cursor:pointer}
+.close-btn:active{transform:scale(.94)}
 .drawer-body{flex:1;overflow:auto;padding:6px 22px 40px}
 .title-input{width:100%;border:0;background:none;font-size:26px;font-weight:300;line-height:1.25;resize:none;padding:4px 0 8px;overflow:hidden}
 .title-input:focus{outline:none;border-bottom:1px solid var(--accent)}
@@ -238,7 +241,7 @@ dialog .inp{width:100%}
   <div class="drawer-top">
     <button class="check" id="dCheck" title="Mark done">✓</button>
     <div class="spacer"></div>
-    <button class="icon-btn" id="dClose">Close</button>
+    <button class="close-btn" id="dClose" aria-label="Close" title="Close">✕</button>
   </div>
   <div class="drawer-body" id="dBody"></div>
 </aside>
@@ -759,6 +762,35 @@ $('dCheck').onclick = () => {
   setStatus(t, t.status === 'done' ? 'active' : 'done'); render(); renderDrawer();
 };
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && state.openId) closeTask(); });
+
+/* Swipe right on the task drawer to close it */
+(() => {
+  const d = $('drawer');
+  let x0 = null, y0 = 0, dx = 0, horiz = null;
+  d.addEventListener('touchstart', e => {
+    if (!state.openId || e.touches.length !== 1) return;
+    if (e.target.closest('input, textarea, select')) return;
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; horiz = null;
+  }, { passive: true });
+  d.addEventListener('touchmove', e => {
+    if (x0 === null) return;
+    const mx = e.touches[0].clientX - x0, my = e.touches[0].clientY - y0;
+    if (horiz === null && (Math.abs(mx) > 10 || Math.abs(my) > 10)) horiz = Math.abs(mx) > Math.abs(my);
+    if (!horiz) return;
+    dx = Math.max(0, mx);
+    d.classList.add('dragging');
+    d.style.transform = `translateX(${dx}px)`;
+  }, { passive: true });
+  const end = () => {
+    if (x0 === null) return;
+    d.classList.remove('dragging');
+    d.style.transform = '';
+    if (horiz && dx > Math.min(100, d.offsetWidth * 0.25)) closeTask();
+    x0 = null;
+  };
+  d.addEventListener('touchend', end);
+  d.addEventListener('touchcancel', end);
+})();
 
 /* ---------- settings ---------- */
 function openSettings(){
