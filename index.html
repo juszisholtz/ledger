@@ -156,7 +156,7 @@ main{flex:1;min-height:0;overflow:auto}
 .drawer-top{display:flex;align-items:center;gap:8px;padding:12px 18px}
 .close-btn{width:44px;height:44px;border-radius:99px;border:1px solid var(--glass-line);background:var(--glass);color:var(--text);font-size:20px;line-height:1;display:inline-flex;align-items:center;justify-content:center;box-shadow:var(--hi);cursor:pointer}
 .close-btn:active{transform:scale(.94)}
-.drawer-body{flex:1;overflow:auto;padding:6px 22px 40px}
+.drawer-body{flex:1;overflow:auto;overscroll-behavior:contain;padding:6px 22px 40px}
 .title-input{width:100%;border:0;background:none;font-size:26px;font-weight:300;line-height:1.25;resize:none;padding:4px 0 8px;overflow:hidden}
 .title-input:focus{outline:none;border-bottom:1px solid var(--accent)}
 .field{display:grid;grid-template-columns:110px 1fr;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
@@ -763,30 +763,47 @@ $('dCheck').onclick = () => {
 };
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && state.openId) closeTask(); });
 
-/* Swipe right on the task drawer to close it */
+/* Swipe the task drawer away: right, or down when scrolled to the top */
 (() => {
-  const d = $('drawer');
-  let x0 = null, y0 = 0, dx = 0, horiz = null;
+  const d = $('drawer'), body = $('dBody');
+  let x0 = null, y0 = 0, dist = 0, dir = null;
   d.addEventListener('touchstart', e => {
-    if (!state.openId || e.touches.length !== 1) return;
-    if (e.target.closest('input, textarea, select')) return;
-    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; horiz = null;
+    if (!state.openId || e.touches.length !== 1) { x0 = null; return; }
+    // Only skip a field you're actively typing in, so text selection still works there.
+    const f = e.target.closest('input, textarea, select');
+    if (f && f === document.activeElement) { x0 = null; return; }
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dist = 0; dir = null;
   }, { passive: true });
   d.addEventListener('touchmove', e => {
     if (x0 === null) return;
     const mx = e.touches[0].clientX - x0, my = e.touches[0].clientY - y0;
-    if (horiz === null && (Math.abs(mx) > 10 || Math.abs(my) > 10)) horiz = Math.abs(mx) > Math.abs(my);
-    if (!horiz) return;
-    dx = Math.max(0, mx);
-    d.classList.add('dragging');
-    d.style.transform = `translateX(${dx}px)`;
-  }, { passive: true });
+    if (dir === null){
+      if (Math.abs(mx) < 8 && Math.abs(my) < 8) return;
+      if (Math.abs(mx) > Math.abs(my)) dir = mx > 0 ? 'right' : 'none';
+      else dir = (my > 0 && body.scrollTop <= 0) ? 'down' : 'none';
+      if (dir === 'none'){ x0 = null; return; }
+      document.activeElement?.blur?.();
+      d.classList.add('dragging');
+    }
+    e.preventDefault();
+    dist = Math.max(0, dir === 'right' ? mx : my);
+    d.style.transform = dir === 'right' ? `translateX(${dist}px)` : `translateY(${dist}px)`;
+  }, { passive: false });
   const end = () => {
     if (x0 === null) return;
+    const size = dir === 'down' ? d.offsetHeight : d.offsetWidth;
+    const close = dir && dist > Math.min(90, size * 0.2);
     d.classList.remove('dragging');
-    d.style.transform = '';
-    if (horiz && dx > Math.min(100, d.offsetWidth * 0.25)) closeTask();
-    x0 = null;
+    if (close && dir === 'down'){
+      // Finish the slide downward, then quietly reset to the closed (off to the right) spot.
+      d.style.transform = 'translateY(100%)';
+      closeTask();
+      setTimeout(() => { d.classList.add('dragging'); d.style.transform = ''; d.offsetWidth; d.classList.remove('dragging'); }, 260);
+    } else {
+      d.style.transform = '';
+      if (close) closeTask();
+    }
+    x0 = null; dir = null;
   };
   d.addEventListener('touchend', end);
   d.addEventListener('touchcancel', end);
