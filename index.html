@@ -103,8 +103,8 @@ header{display:flex;align-items:center;gap:12px;padding:16px 22px;flex-wrap:wrap
 main{flex:1;min-height:0;overflow:auto}
 
 /* Board */
-.board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(280px,1fr);gap:18px;padding:8px 22px 24px;min-height:100%;align-items:start}
-.col{background:var(--sunk);border:1px solid var(--glass-line);-webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);box-shadow:var(--hi);border-radius:24px;padding:12px;min-height:120px;transition:background .15s}
+.board{display:flex;flex-direction:column;gap:16px;max-width:860px;margin:0 auto;padding:8px 22px 24px}
+.col{background:var(--sunk);border:1px solid var(--glass-line);-webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);box-shadow:var(--hi);border-radius:24px;padding:12px;min-height:56px;transition:background .15s}
 .col.drop{background:var(--accent-soft)}
 .col h2{font-size:13px;margin:4px 8px 12px;display:flex;justify-content:space-between;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .col h2 span{color:var(--muted);font-weight:400;letter-spacing:0;min-width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--glass);border:1px solid var(--glass-line);font-size:12px}
@@ -213,9 +213,7 @@ dialog .inp{width:100%}
   .brand{font-size:26px}
   .brand small{display:none}
   .summary{order:10;width:100%}
-  .board{grid-auto-columns:86vw;scroll-snap-type:x mandatory;padding:6px 16px 16px;overflow-x:auto;gap:14px}
-  main:has(.board){overflow-y:auto}
-  .col{scroll-snap-align:center}
+  .board{padding:6px 16px 16px;gap:12px}
   .list{padding:6px 16px 16px}
   .field{grid-template-columns:90px 1fr}
   .icon-btn .lbl{display:none}
@@ -562,9 +560,9 @@ function render(){
   }
   if (!state.loaded){ main.innerHTML = `<p class="empty" style="padding:20px">Loading your tasks…</p>`; return; }
   const focusQuick = document.activeElement?.matches?.('[data-quick]');
-  const scroll = main.querySelector('.board')?.scrollLeft;
+  const scroll = main.scrollTop;
   main.innerHTML = state.view === 'board' ? renderBoard() : renderList();
-  if (scroll) main.querySelector('.board').scrollLeft = scroll;
+  main.scrollTop = scroll;
   if (focusQuick) main.querySelector('[data-quick]')?.focus();
 }
 
@@ -633,18 +631,17 @@ function renderDrawer(){
     </div>
     <div class="field"><label for="fDue">Due date</label>
       <div class="inline">
-        <input type="date" class="inp num" id="fDue" value="${t.due || ''}">
-        <input type="time" class="inp num" id="fTime" value="${t.time || ''}" aria-label="Time (optional)" ${t.due ? '' : 'disabled'}>
-        ${t.due ? `<button class="link-btn" id="fClear">Clear</button>` : ''}
+        <input type="date" class="inp num" id="fDue">
+        <input type="time" class="inp num" id="fTime" aria-label="Time (optional)">
+        <button class="link-btn" id="fClearTime">No time</button>
+        <button class="link-btn" id="fClear">Clear date</button>
       </div>
     </div>
     <div class="field"><label>Calendar</label>
       <div>
         <div class="inline"><button class="switch" role="switch" id="fCal" aria-checked="${!!t.calendar}" aria-label="Add to calendar"></button>
         <span style="font-size:14px;color:var(--muted)">${t.calendar ? 'This is an event' : 'Just a to-do'}</span></div>
-        ${t.calendar ? (t.due
-          ? `<div class="cal-actions"><a class="btn" target="_blank" rel="noopener" href="${googleCalUrl(t)}">Add to Google Calendar</a><button class="btn" id="fIcs">Add to Apple Calendar</button></div>`
-          : `<div style="font-size:13px;color:var(--muted);margin-top:6px">Set a date to add it to your calendar.</div>`) : ''}
+        <div id="calActions"></div>
       </div>
     </div>
 
@@ -677,11 +674,42 @@ function renderDrawer(){
 
   $('dBody').querySelectorAll('[data-status-set]').forEach(b => b.onclick = () => { setStatus(t, b.dataset.statusSet); render(); renderDrawer(); });
 
-  $('fDue').onchange = e => { t.due = e.target.value || null; if (!t.due) t.time = null; if (t.due) promote(t); queueSave(t); render(); renderDrawer(); };
-  $('fTime').onchange = e => { t.time = e.target.value || null; queueSave(t); render(); renderDrawer(); };
-  $('fClear') && ($('fClear').onclick = () => { t.due = null; t.time = null; queueSave(t); render(); renderDrawer(); });
+  // Date + time: never rebuild the drawer here. Rebuilding destroys the input while
+  // its iPhone picker is open, which is what made the picker flash shut.
+  // Values are set as properties (not HTML attributes) so the iPhone "Reset" button
+  // resets to empty instead of back to the current value.
+  const fDue = $('fDue'), fTime = $('fTime');
+  fDue.value = t.due || '';
+  fTime.value = t.time || '';
+  const syncDateUi = () => {
+    fTime.disabled = !t.due;
+    $('fClear').hidden = !t.due;
+    $('fClearTime').hidden = !t.time;
+    $('dBody').querySelectorAll('[data-status-set]').forEach(b => b.setAttribute('aria-pressed', t.status === b.dataset.statusSet));
+    $('calActions').innerHTML = !t.calendar ? '' : t.due
+      ? `<div class="cal-actions"><a class="btn" target="_blank" rel="noopener" href="${googleCalUrl(t)}">Add to Google Calendar</a><button class="btn" id="fIcs">Add to Apple Calendar</button></div>`
+      : `<div style="font-size:13px;color:var(--muted);margin-top:6px">Set a date to add it to your calendar.</div>`;
+    $('fIcs') && ($('fIcs').onclick = () => downloadIcs(t));
+  };
+  const setDue = v => {
+    v = v || null;
+    if (v === t.due) return;
+    t.due = v;
+    if (!v){ t.time = null; fTime.value = ''; } else promote(t);
+    queueSave(t); render(); syncDateUi();
+  };
+  const setTime = v => {
+    v = v || null;
+    if (v === t.time) return;
+    t.time = v;
+    queueSave(t); render(); syncDateUi();
+  };
+  fDue.oninput = fDue.onchange = () => setDue(fDue.value);
+  fTime.oninput = fTime.onchange = () => setTime(fTime.value);
+  $('fClear').onclick = () => { fDue.value = ''; setDue(null); };
+  $('fClearTime').onclick = () => { fTime.value = ''; setTime(null); };
+  syncDateUi();
   $('fCal').onclick = () => { t.calendar = !t.calendar; if (t.calendar) promote(t); queueSave(t); render(); renderDrawer(); };
-  $('fIcs') && ($('fIcs').onclick = () => downloadIcs(t));
 
   $('dBody').querySelectorAll('[data-sub-check]').forEach(c => c.onchange = () => { t.subtasks[+c.dataset.subCheck].done = c.checked; queueSave(t); render(); renderDrawer(); });
   $('dBody').querySelectorAll('[data-sub-text]').forEach(inp => {
